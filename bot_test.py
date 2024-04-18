@@ -9,10 +9,11 @@ CHANNEL_ID = 'ここにチャンネルIDを入力してください。'
 # 初期化・インスタンス作成
 intents = discord.Intents.all()
 intents.reactions = True
+intents.messages = True
 intents.guilds = True
 # discord.py Ver2.0 以降は必要
 intents.message_content = True
-client = discord.Client(intents = discord.Intents.default())
+client = discord.Client(intents = intents)
 
 @client.event
 async def on_ready():
