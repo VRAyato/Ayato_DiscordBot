@@ -13,6 +13,7 @@ intents.messages = True
 intents.guilds = True
 # discord.py Ver2.0 以降は必要
 intents.message_content = True
+#BOT作成
 client = discord.Client(intents = intents)
 
 @client.event
