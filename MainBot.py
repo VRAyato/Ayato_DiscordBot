@@ -6,14 +6,16 @@ import random
 import discord
 from discord.ext import commands
 from discord import app_commands
+import mysql.connector
+from mysql.connector import Error
 
 #TOKENを設定
-TOKEN = 'TOKENを入力してください'
+TOKEN = 'TOKENを指定する。'
 #チャンネルIDを設定
-CHANNEL_ID = 1234567890    #あそびばチャンネル
-CHANNEL_ID2 = 2345678901   #実験用チャンネル
+CHANNEL_ID = 'チャンネルIDを書く'    #あそびばチャンネル
+CHANNEL_ID2 = 'チャンネルIDを書く'   #実験用チャンネル
 #鯖管理人のユーザーIDを設定
-user_id = '123456781237890'
+user_id = 'ユーザーIDを書く'
 
 # 初期化・インスタンス作成
 intents = discord.Intents.all()
@@ -25,6 +27,60 @@ intents.message_content = True
 client = discord.Client(intents = intents)
 tree = app_commands.CommandTree(client)
 
+# MySQL接続情報
+MYSQL_HOST = 'HOSTを指定する。'
+MYSQL_USER = 'ユーザー名を指定する。'
+MYSQL_PASSWORD = 'パスワードを指定する。'
+MYSQL_DATABASE = 'データベース名を指定する。'
+# MySQL接続の作成
+mysql_config = {
+    'host': MYSQL_HOST,
+    'user': MYSQL_USER,
+    'password': MYSQL_PASSWORD,
+    'database': MYSQL_DATABASE
+}
+
+#MySQL接続関数
+def connect_mysql():
+    global Connect_flag
+    try:
+        connection = mysql.connector.connect(**mysql_config)
+        print("Connected to MySQL database")
+        Connect_flag = "MySQLに接続しました。"
+        return connection
+    except Error as e:
+        print("Error while connecting to MySQL", e)
+        Connect_flag = "MySQLに接続できませんでした。"
+        return None
+
+#MySQLインサート関数
+def insert_data():
+    global avatar_name
+    global avatar_url
+    global mysql_flag
+    try:
+        connection = connect_mysql()
+        if connection:
+            cursor = connection.cursor()
+            insert_query = "INSERT INTO テーブル名 (Col1, Col2) VALUES (%s, %s)"
+            data = (avatar_name, avatar_url)
+            cursor.execute(insert_query, data)
+            connection.commit()
+            print("Record inserted successfully")
+            mysql_flag = "画像を登録しました。"
+    except Error as e:
+        print("Error while connecting to MySQL", e)
+        mysql_flag = "MySQLに接続できませんでした。"
+    finally:
+        if connection:
+            cursor.close()
+            connection.close()
+            print("MySQL connection is closed")
+
+#MySQLセレクト関数
+def select_deta():
+    print('今は関数を作成中です。')
+##########################################################################################################
 # メッセージ関係
 @client.event
 async def on_message(message):
@@ -76,32 +132,55 @@ async def on_message(message):
             await message.channel.send(f'{yuu_result}')
     ##########################################################################################################
     # 以下は実験用チャンネルでのみ反応する（BOT管理権限がある人のみ利用）
+    global avatar_name
+    global avatar_url
+    global mysql_flag
     if message.channel.id == CHANNEL_ID2:
         if message.attachments:
             for attachment in message.attachments:
                 if 'スピカちゃん' in message.content:
                     string = 'スピカ'
-                if 'ミラちゃん' in message.content:
+                    avatar_name = 'スピカ'
+                elif 'ミラちゃん' in message.content:
                     string = 'ミラ'
-                if 'ユウちゃん' in message.content:
+                elif 'ユウちゃん' in message.content:
                     string = 'ユウ'
-                if 'リルちゃん' in message.content:
+                    avatar_name = 'ユウ'
+                elif 'リルちゃん' in message.content:
                     string = 'リル'
-                if 'ミルちゃん' in message.content:
+                    avatar_name = 'リル'
+                elif 'ミルちゃん' in message.content:
                     string = 'ミル'
-                if 'ティナちゃん' in message.content:
+                    avatar_name = 'ミル'
+                elif 'ティナちゃん' in message.content:
                     string = 'ティナ'
-                if 'レイちゃん' in message.content:
+                    avatar_name = 'ティナ'
+                elif 'レイちゃん' in message.content:
                     string = 'レイ'
-                if 'リリカちゃん' in message.content:
+                    avatar_name = 'レイ'
+                elif 'リリカちゃん' in message.content:
                     string = 'リリカ'
-                if 'になちゃん' in message.content:
+                    avatar_name = 'リリカ'
+                elif 'になちゃん' in message.content:
                     string = 'にな'
-                await message.channel.send(f'アバター名:{string}ちゃん\n')
-                await message.channel.send(attachment.url)
-                print(f'メッセージ内容: {message.content.strip().replace(" ","")}\n')
-                print(f'アバター名:{string}')
-                print(attachment.url)
+                    avatar_name = 'にな'
+                elif 'ちゃやねこ' in message.content:
+                    string = 'ちゃやねこ'
+                    avatar_name = 'ちゃやねこ'
+                else:
+                    string = '名前不明'
+                ##########################################################################################################
+                if string == '名前不明':
+                    print('登録されたアバター以外の名前が検出されました')
+                else:
+                    await message.channel.send(f'アバター名:{string}ちゃん\n')
+                    await message.channel.send(attachment.url)
+                    print(f'メッセージ内容: {message.content.strip().replace(" ","")}\n')
+                    print(f'アバター名:{string}')
+                    print(attachment.url)
+                    avatar_url = attachment.url
+                    insert_data()
+                    await message.channel.send(f'{mysql_flag}')
                 #if attachment.url.endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp')):
                 #    await message.channel.send(f'{attachment.url}')
                 #    print('画像が検出されました')
@@ -130,6 +209,12 @@ async def on_ready():
     print(f'{client.user}')
     print(f'{client.user.name} has connected to Discord!')
     print('--------------------------------------------------')
+    #起動したら実験用チャンネルに起動メッセージを送信する。
+    global Connect_flag
+    connect_mysql()
+    channel = client.get_channel(CHANNEL_ID2)
+    await channel.send('DiscordBOTが起動しました。')
+    await channel.send(Connect_flag)
     await tree.sync()
 
 # Discord Botを実行
