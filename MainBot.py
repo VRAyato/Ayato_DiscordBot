@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding: UTF-8
 # ライブラリのインポート
+import asyncio
 import sys
 import random
 import discord
@@ -10,12 +11,12 @@ import mysql.connector
 from mysql.connector import Error
 
 #TOKENを設定
-TOKEN = 'トークンを設定してください。'
+TOKEN = 'トークンを入力してください。'
 #チャンネルIDを設定
-CHANNEL_ID = 1234567890987654321    #あそびばチャンネル
-CHANNEL_ID2 = 1234567890987654321   #実験用チャンネル
+CHANNEL_ID = 1234567890    #あそびばチャンネル
+CHANNEL_ID2 = 1234567890   #実験用チャンネル
 #鯖管理人のユーザーIDを設定
-user_id = '23456789012345678'
+user_id = '1234567890'
 
 # 初期化・インスタンス作成
 intents = discord.Intents.all()
@@ -26,12 +27,14 @@ intents.guilds = True
 intents.message_content = True
 client = discord.Client(intents = intents)
 tree = app_commands.CommandTree(client)
-
+##########
+reaction_history = {}
+##########
 # MySQL接続情報
-MYSQL_HOST = 'Host名を設定してください。'
-MYSQL_USER = 'ユーザー名を設定してください。'
-MYSQL_PASSWORD = 'パスワードを設定してください。'
-MYSQL_DATABASE = ' データベース名を設定してください。'
+MYSQL_HOST = 'host名を入力してください。'
+MYSQL_USER = 'ユーザー名を入力してください。'
+MYSQL_PASSWORD = 'パスワードを入力してください。'
+MYSQL_DATABASE = ' データベース名を入力してください。'
 # MySQL接続の作成
 mysql_config = {
     'host': MYSQL_HOST,
@@ -117,7 +120,7 @@ async def on_message(message):
     # 自分自身には反応しない。
     if message.author == client.user:
         return
-        # おみくじのリスト
+    # おみくじのリスト
     message_unsei = [
         '大吉',
         '吉',
@@ -129,7 +132,6 @@ async def on_message(message):
         '凶',
         '大凶'
         ]
-
     yuu_image_list = [
         'https://hub.ayatovr.jp/webdav/yuu/VRChat_2024-03-01_18-58-53.137_3840x2160.png',
         'https://hub.ayatovr.jp/webdav/yuu/VRChat_2024-03-01_18-59-27.831_3840x2160.png',
@@ -229,12 +231,144 @@ async def on_message(message):
     ##########################################################################################################
     global avatar_list
     if "登録可能アバター"  in message.content:
+        username = message.author.name
+        print("Username:", username)
         select_deta()
         # MySQLから取得した要素を一つずつ出して格納する（リスト内包表記）最後に「ちゃん」を付ける
         result = 'ちゃん、'.join([item for item in avatar_list])
         result = result + 'ちゃん'
         await message.channel.send('登録可能アバターは以下の通りです')
         await message.channel.send(f'{result}')
+    ##########################################################################################################
+    # グローバル変数の定義
+    global sent_message_id
+    global author_message
+    global reacted_message_id
+        #戻り値の定義
+    global count_rollback
+    global r_sum
+    # 変数の初期化
+    count_rollback = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    r_sum = ''
+
+    if "dice" in message.content:
+        sent_message = await message.channel.send('サイコロを振る回数を選択してください。（1回、2回、3回）\n 1️⃣:1回 2️⃣:2回 3️⃣:3回\n 一致なし：5点 2つ一致：10点 全部一致：20点')
+        author_message = message.author
+        await asyncio.sleep(1)
+        # メッセージにリアクションをつける
+        await sent_message.add_reaction('1️⃣')
+        await sent_message.add_reaction('2️⃣')
+        await sent_message.add_reaction('3️⃣')
+        sent_message_id = sent_message.id
+    ##########################################################################################################
+# リアクション関係（リアクション追加/削除）
+@client.event
+async def on_reaction_add(reaction, user):
+    # グローバル変数の定義
+    global sent_message_id
+    global author_message
+    global reacted_message_id
+    global dice_flag
+    global count_123
+    # 変数の初期化
+    dice_flag = 0
+
+    if user.bot:
+        return
+    #################################################
+    if reaction.message.channel.id == CHANNEL_ID2:
+        reacted_message_id = reaction.message.id
+        if reacted_message_id == sent_message_id:
+            if user.id == author_message.id:
+                if author_message.display_name is not None:
+                    nickname = author_message.display_name
+                else:
+                    nickname = author_message.name
+                #####################################################
+                if str(reaction.emoji) == '1️⃣' and dice_flag == 0:
+                    dice_flag = 1
+                    count_123 = 1
+                    await reaction.message.clear_reactions()
+                elif str(reaction.emoji) == '2️⃣' and dice_flag == 0:
+                    dice_flag = 1
+                    count_123 = 2
+                    await reaction.message.clear_reactions()
+                elif str(reaction.emoji) == '3️⃣' and dice_flag == 0:
+                    dice_flag = 1
+                    count_123 = 3
+                    await reaction.message.clear_reactions()
+                else:
+                    await reaction.message.channel.send('同じメッセージにリアクションは2回以上できません。')
+                ## リアクションが押されたら処理を実行(最後にフラグを初期化する)
+                dice_count()
+                if dice_flag == 1:
+                    await reaction.message.channel.send(f'{count_back}します。')
+                    for i in range(1, count_123+1):
+                        await reaction.message.channel.send(f'{count_rollback[i]}')
+                    await reaction.message.channel.send(f'{nickname}の{r_sum}')
+
+@client.event
+async def on_reaction_remove(reaction, user):
+    # グローバル変数の定義
+    global dice_flag
+    global sent_message_id
+    global reacted_message_id
+
+    if user.bot:
+        return
+    if reaction.message.channel.id == CHANNEL_ID2:
+        reacted_message_id = reaction.message.id
+        if reacted_message_id == sent_message_id:
+            if str(reaction.emoji) == '1️⃣' or str(reaction.emoji) == '2️⃣' or str(reaction.emoji) == '3️⃣':
+                dice_flag = 2
+                #await reaction.message.channel.send('リアクションが削除されました')
+
+def dice_count():
+    # サイコロの目のリスト
+    dice_list = {
+        "<:dice_01:1232580450816622622>":"1","<:dice_02:1232580479312723968>":"2","<:dice_03:1232580502054109185>":"3",
+        "<:dice_04:1232580522375385178>":"4","<:dice_05:1232580554260480012>":"5","<:dice_06:1232580570907934772>":"6"
+        }
+    # グローバル変数の定義
+    global dice_flag
+    global dice_sum
+        #戻り値の定義
+    global count_back
+    global count_rollback
+    global r_sum
+    # 変数の初期化
+    count_rollback = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    count_back = ''
+    r_sum = ''
+    count_123
+    dice_sum = 0
+    dice_flag = 1
+
+    if count_123 == 1:
+        count_back = '1投'
+    elif count_123 == 2:
+        count_back = '2投'
+    elif count_123 == 3:
+        count_back = '3投'
+
+    for i in range(1, count_123+1):
+        dice1 = random.choice(list(dice_list.keys()))
+        dice2 = random.choice(list(dice_list.keys()))
+        dice3 = random.choice(list(dice_list.keys()))
+        if dice1 == dice2 == dice3:
+            kekka = '全部そろいました'
+            dice_sum += 20
+        elif dice1 == dice2 or dice1 == dice3 or dice2 == dice3:
+            kekka = '2つそろいました'
+            dice_sum += 10
+        else:
+            kekka = '揃いませんでした'
+            dice_sum += 5
+        print(kekka)
+        count_rollback[i] = (f'{dice1} {dice2} {dice3}')
+    r_sum = (f'得点：{dice_sum}点')
+    dice_sum = 2
+    return count_back, count_rollback, r_sum
 
 #スラッシュコマンドの定義
 @tree.command(name="hello",description="挨拶するコマンドです。")
@@ -261,9 +395,9 @@ async def on_ready():
     #起動したら実験用チャンネルに起動メッセージを送信する。
     global Connect_flag
     connect_mysql()
-    channel = client.get_channel(CHANNEL_ID2)
-    await channel.send('DiscordBOTが起動しました。')
-    await channel.send(Connect_flag)
+    #channel = client.get_channel(CHANNEL_ID2)
+    #await channel.send('DiscordBOTが起動しました。')
+    #await channel.send(Connect_flag)
     await tree.sync()
 
 # Discord Botを実行
