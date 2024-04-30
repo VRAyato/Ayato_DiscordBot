@@ -15,3 +15,15 @@ Discord.pyパッケージのインストール
 ```
 $ pip3 install discord.py
 ```
+
+導入済みパッケージ一覧
+```
+import asyncio
+import sys
+import random
+import discord
+from discord.ext import commands
+from discord import app_commands
+import mysql.connector
+from mysql.connector import Error
+```
