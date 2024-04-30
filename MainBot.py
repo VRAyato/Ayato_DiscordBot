@@ -31,10 +31,12 @@ tree = app_commands.CommandTree(client)
 reaction_history = {}
 ##########
 # MySQL接続情報
-MYSQL_HOST = 'host名を入力してください。'
-MYSQL_USER = 'ユーザー名を入力してください。'
-MYSQL_PASSWORD = 'パスワードを入力してください。'
-MYSQL_DATABASE = ' データベース名を入力してください。'
+MYSQL_HOST = 'HOST名を入力'
+MYSQL_USER = 'ユーザー名を入力'
+MYSQL_PASSWORD = 'パスワードを入力'
+MYSQL_DATABASE = ' データベース名を入力'
+###################################
+###################################
 # MySQL接続の作成
 mysql_config = {
     'host': MYSQL_HOST,
@@ -252,7 +254,7 @@ async def on_message(message):
     r_sum = ''
 
     if "dice" in message.content:
-        sent_message = await message.channel.send('サイコロを振る回数を選択してください。（1回、2回、3回）\n 1️⃣:1回 2️⃣:2回 3️⃣:3回\n 一致なし：5点 2つ一致：10点 全部一致：20点')
+        sent_message = await message.channel.send('サイコロを振る回数を選択してください。（1回、2回、3回）\n 1️⃣:1回 2️⃣:2回 3️⃣:3回')
         author_message = message.author
         await asyncio.sleep(1)
         # メッセージにリアクションをつける
@@ -260,6 +262,7 @@ async def on_message(message):
         await sent_message.add_reaction('2️⃣')
         await sent_message.add_reaction('3️⃣')
         sent_message_id = sent_message.id
+        await message.channel.send('https://cdn.discordapp.com/attachments/1230023086850572300/1234352822594830398/image.png?ex=66306c26&is=662f1aa6&hm=511d7678d1c6737bf8d8f28a930c8254ac838ab5b910f30548db07d10827be04&')
     ##########################################################################################################
 # リアクション関係（リアクション追加/削除）
 @client.event
@@ -357,19 +360,34 @@ def dice_count():
         dice3 = random.choice(list(dice_list.keys()))
         if dice1 == dice2 == dice3:
             kekka = '全部そろいました'
-            dice_sum += 20
+            if count_123 == 1:  #1投
+                dice_sum += 20
+            elif count_123 ==2:  #2投
+                dice_sum += 30
+            elif count_123 == 3:  #3投
+                dice_sum += 60
         elif dice1 == dice2 or dice1 == dice3 or dice2 == dice3:
             kekka = '2つそろいました'
-            dice_sum += 10
+            if count_123 == 1:  #1投
+                dice_sum += 30
+            elif count_123 ==2:  #2投
+                dice_sum += 15
+            elif count_123 == 3:  #3投
+                dice_sum += 10
         else:
             kekka = '揃いませんでした'
-            dice_sum += 5
-        print(kekka)
+            if count_123 == 1:  #1投
+                dice_sum += 6
+            elif count_123 ==2:  #2投
+                dice_sum += 3
+            elif count_123 == 3:  #3投
+                dice_sum += 2
         count_rollback[i] = (f'{dice1} {dice2} {dice3}')
+
     r_sum = (f'得点：{dice_sum}点')
     dice_sum = 2
     return count_back, count_rollback, r_sum
-
+################################################################################################################################################################
 #スラッシュコマンドの定義
 @tree.command(name="hello",description="挨拶するコマンドです。")
 async def hello_command(interaction: discord.Interaction):
@@ -380,10 +398,10 @@ async def test_command(interaction: discord.Interaction):
     await interaction.response.send_message("てすと！",ephemeral=True)
 
 @tree.command(name="info",description="DiscordBOTの情報を表示するコマンドです。")
-async def test_command2(interaction: discord.Interaction):
+async def info_command(interaction: discord.Interaction):
     python_version = sys.version
     await interaction.response.send_message(f"当BOTは以下の構成で動いています。\n RaspberryPi 4B(4GB)\n UbuntuServer 22.04.4LTS\n Python {python_version}\n discord.py v2.3.2\n 問い合せ：<@{user_id}>",ephemeral=False)
-
+################################################################################
 # Discord Botが起動したときの処理
 @client.event
 async def on_ready():
