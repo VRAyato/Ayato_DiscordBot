@@ -11,12 +11,12 @@ import mysql.connector
 from mysql.connector import Error
 
 #TOKENを設定
-TOKEN = 'トークンを入力してください。'
+TOKEN = 'トークンを記載する'
 #チャンネルIDを設定
-CHANNEL_ID = 1234567890    #あそびばチャンネル
-CHANNEL_ID2 = 1234567890   #実験用チャンネル
+CHANNEL_ID = "チャンネルIDを記載する"    #あそびばチャンネル
+CHANNEL_ID2 = "チャンネルIDを記載する"   #実験用チャンネル
 #鯖管理人のユーザーIDを設定
-user_id = '1234567890'
+user_id = '12345678901234'
 
 # 初期化・インスタンス作成
 intents = discord.Intents.all()
@@ -27,16 +27,19 @@ intents.guilds = True
 intents.message_content = True
 client = discord.Client(intents = intents)
 tree = app_commands.CommandTree(client)
-##########
-reaction_history = {}
-##########
+############################################
 # MySQL接続情報
-MYSQL_HOST = 'HOST名を入力'
-MYSQL_USER = 'ユーザー名を入力'
-MYSQL_PASSWORD = 'パスワードを入力'
-MYSQL_DATABASE = ' データベース名を入力'
-###################################
-###################################
+MYSQL_HOST = 'HOST名を記載する'
+MYSQL_USER = 'ユーザー名を記載する'
+MYSQL_PASSWORD = 'パスワードを記載する'
+MYSQL_DATABASE = 'データベース名を記載する'
+############################################
+############################################
+#グローバル変数定義・変数初期化
+global dirce_flag2
+reaction_history = {}
+dirce_flag2 = 0
+############################################
 # MySQL接続の作成
 mysql_config = {
     'host': MYSQL_HOST,
@@ -170,6 +173,8 @@ async def on_message(message):
     global avatar_name
     global avatar_url
     global mysql_flag
+    global dirce_flag2
+    dirce_flag2 = 0
     if message.channel.id == CHANNEL_ID2:
         if message.attachments:
             for attachment in message.attachments:
@@ -273,6 +278,8 @@ async def on_reaction_add(reaction, user):
     global reacted_message_id
     global dice_flag
     global count_123
+    global nickname #名前
+    global userid #ID
     # 変数の初期化
     dice_flag = 0
 
@@ -283,6 +290,7 @@ async def on_reaction_add(reaction, user):
         reacted_message_id = reaction.message.id
         if reacted_message_id == sent_message_id:
             if user.id == author_message.id:
+                userid = author_message.id
                 if author_message.display_name is not None:
                     nickname = author_message.display_name
                 else:
@@ -325,7 +333,6 @@ async def on_reaction_remove(reaction, user):
             if str(reaction.emoji) == '1️⃣' or str(reaction.emoji) == '2️⃣' or str(reaction.emoji) == '3️⃣':
                 dice_flag = 2
                 #await reaction.message.channel.send('リアクションが削除されました')
-
 def dice_count():
     # サイコロの目のリスト
     dice_list = {
@@ -339,6 +346,8 @@ def dice_count():
     global count_back
     global count_rollback
     global r_sum
+    global nickname #名前
+    global userid #ID
     # 変数の初期化
     count_rollback = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
     count_back = ''
@@ -385,10 +394,75 @@ def dice_count():
         count_rollback[i] = (f'{dice1} {dice2} {dice3}')
 
     r_sum = (f'得点：{dice_sum}点')
-    dice_sum = 2
+    dice_sql()
     return count_back, count_rollback, r_sum
-################################################################################################################################################################
-#スラッシュコマンドの定義
+
+def dice_sql():
+    # グローバル変数の定義
+    global nickname
+    global userid
+    userdb = (userid,)  #タプル型へ...
+    dirce_flag =0
+    global dirce_flag2
+    dirce_flag2 = 0
+    try:
+        connection = connect_mysql()
+        if connection:
+            cursor = connection.cursor()
+            select_query = "SELECT * FROM user_list WHERE user_id = %s;"
+            cursor.execute(select_query,userdb)
+            rows = cursor.fetchall()
+            if rows:
+                print ("ユーザー登録済みです。")
+                dirce_flag2=0
+            else:
+                print("登録がまだです。")
+                dirce_flag2=1
+    except Error as e:
+        print("Error while connecting to MySQL", e)
+    finally:
+        if connection:
+            cursor.close()
+            connection.close()
+            print("MySQL connection is closed")
+#######################################################################################
+    if dirce_flag2 == 1:
+        try:
+            connection = connect_mysql()
+            if connection:
+                connection.start_transaction()  #トランザクション開始
+                cursor = connection.cursor()
+                insert_query = "INSERT INTO user_list(user_id,user_name) VALUES (%s,%s)"
+                data = (userid,nickname)
+                cursor.execute(insert_query, data)
+                # コミット
+                connection.commit()
+                print("Record inserted successfully")
+                print('ユーザー登録しました。')
+        except Error as e:
+            print("Error while connecting to MySQL", e)
+            if connection:
+                # ロールバック
+                connection.rollback()
+                print("Transaction rolled back")
+        finally:
+            if connection:
+                cursor.close()
+                connection.close()
+                print("MySQL connection is closed")
+##################################################################################################
+    print(f'ID：{userid}')
+    print(f'名前：{nickname}')
+    print()
+##################################################################################################
+def insert_data2():
+    print ('ユーザー登録処理はここで行う')
+##################################################################################################
+@tree.command(name="userreg",description="当鯖アプリのユーザー登録")
+async def test123_command(interaction: discord.Interaction):
+    await interaction.response.send_message('ユーザー登録が完了しました。',ephemeral=True)
+    insert_data2()
+    print('処理完了')
 @tree.command(name="hello",description="挨拶するコマンドです。")
 async def hello_command(interaction: discord.Interaction):
     await interaction.response.send_message("Hello!",ephemeral=False)   #ephemeral=True →「自分だけに表示するかどうか」の設定
