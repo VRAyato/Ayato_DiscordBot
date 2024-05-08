@@ -3,6 +3,7 @@
 # ライブラリのインポート
 import asyncio
 import sys
+import re
 import random
 import discord
 from discord.ext import commands
@@ -156,6 +157,25 @@ async def on_message(message):
         'https://hub.ayatovr.jp/webdav/yuu/VRChat_2024-04-04_00-25-02.566_3840x2160.png'
     ]
     ##########################################################################################################
+    # 全チャンネルで使う
+    ## TwitterURLの自動変換機能
+    if 'https://twitter.com/' in message.content:   # twitter.com #
+        twitter_url_pattern = r'twitter\.com/(\w+)/status/(\d+)'
+        matches = re.findall(twitter_url_pattern, message.content)
+        if matches:
+            for match in matches:
+                user_id, post_id = match
+                renamed_url = f'https://vxtwitter.com/{user_id}/status/{post_id}'
+                await message.channel.send(renamed_url)
+    if 'https://x.com/' in message.content: # x.com #
+        twitter_url_pattern = r'x\.com/(\w+)/status/(\d+)'
+        matches = re.findall(twitter_url_pattern, message.content)
+        if matches:
+            for match in matches:
+                user_id, post_id = match
+                renamed_url = f'https://vxtwitter.com/{user_id}/status/{post_id}'
+                await message.channel.send(renamed_url)
+    ##########################################################################################################
     # 以下はあそびばチャンネルでのみ反応する
     if message.channel.id == CHANNEL_ID:
         if "おみくじ" in message.content or "占い" in message.content or "うらない" in message.content:
@@ -267,7 +287,8 @@ async def on_message(message):
         await sent_message.add_reaction('2️⃣')
         await sent_message.add_reaction('3️⃣')
         sent_message_id = sent_message.id
-        await message.channel.send('https://cdn.discordapp.com/attachments/1230023086850572300/1234352822594830398/image.png?ex=66306c26&is=662f1aa6&hm=511d7678d1c6737bf8d8f28a930c8254ac838ab5b910f30548db07d10827be04&')
+        #スコア表
+        #await message.channel.send('https://cdn.discordapp.com/attachments/1230023086850572300/1234352822594830398/image.png?ex=66306c26&is=662f1aa6&hm=511d7678d1c6737bf8d8f28a930c8254ac838ab5b910f30548db07d10827be04&')
     ##########################################################################################################
 # リアクション関係（リアクション追加/削除）
 @client.event
@@ -453,7 +474,6 @@ def dice_sql():
 ##################################################################################################
     print(f'ID：{userid}')
     print(f'名前：{nickname}')
-    print()
 ##################################################################################################
 def insert_data2():
     print ('ユーザー登録処理はここで行う')
