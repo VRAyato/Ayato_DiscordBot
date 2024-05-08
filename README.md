@@ -20,6 +20,7 @@ $ pip3 install discord.py
 ```
 import asyncio
 import sys
+import re
 import random
 import discord
 from discord.ext import commands
