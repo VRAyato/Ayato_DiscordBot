@@ -158,7 +158,7 @@ async def on_message(message):
     ]
     ##########################################################################################################
     # 全チャンネルで使う
-    ## TwitterURLの自動変換機能
+    ## TwitterURLの自動変換機能(x.com対応済み)
     if 'https://twitter.com/' in message.content:   # twitter.com #
         twitter_url_pattern = r'twitter\.com/(\w+)/status/(\d+)'
         matches = re.findall(twitter_url_pattern, message.content)
@@ -176,8 +176,8 @@ async def on_message(message):
                 renamed_url = f'https://vxtwitter.com/{user_id}/status/{post_id}'
                 await message.channel.send(renamed_url)
     ##########################################################################################################
-    # 以下はあそびばチャンネルでのみ反応する
-    if message.channel.id == CHANNEL_ID:
+    # 以下はあそびばチャンネル及びBOT管理チャンネルで反応する
+    if message.channel.id == CHANNEL_ID or message.channel.id == CHANNEL_ID2:
         if "おみくじ" in message.content or "占い" in message.content or "うらない" in message.content:
             print('おみくじが引かれました')
             result = random.choice(message_unsei)
