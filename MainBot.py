@@ -4,6 +4,8 @@
 import asyncio
 import sys
 import re
+import json
+import os
 import random
 import discord
 from discord.ext import commands
@@ -40,6 +42,9 @@ MYSQL_DATABASE = 'データベース名を記載する'
 global dirce_flag2
 reaction_history = {}
 dirce_flag2 = 0
+# おみくじ用の変数
+omikuji_results = ['大吉','吉','中吉','小吉','半吉','末吉','末小吉','凶','大凶']
+result_file = 'last_omikuji_result.json'
 ############################################
 # MySQL接続の作成
 mysql_config = {
@@ -126,18 +131,7 @@ async def on_message(message):
     # 自分自身には反応しない。
     if message.author == client.user:
         return
-    # おみくじのリスト
-    message_unsei = [
-        '大吉',
-        '吉',
-        '中吉',
-        '小吉',
-        '半吉',
-        '末吉',
-        '末小吉',
-        '凶',
-        '大凶'
-        ]
+    #アバターリスト
     yuu_image_list = [
         'https://hub.ayatovr.jp/webdav/yuu/VRChat_2024-03-01_18-58-53.137_3840x2160.png',
         'https://hub.ayatovr.jp/webdav/yuu/VRChat_2024-03-01_18-59-27.831_3840x2160.png',
@@ -156,6 +150,7 @@ async def on_message(message):
         'https://hub.ayatovr.jp/webdav/yuu/VRChat_2024-04-04_00-21-21.692_2160x3840.png',
         'https://hub.ayatovr.jp/webdav/yuu/VRChat_2024-04-04_00-25-02.566_3840x2160.png'
     ]
+    result_file = 'last_omikuji_result.json'
     ##########################################################################################################
     # 全チャンネルで使う
     ## TwitterURLの自動変換機能(x.com対応済み)
@@ -178,10 +173,13 @@ async def on_message(message):
     ##########################################################################################################
     # 以下はあそびばチャンネル及びBOT管理チャンネルで反応する
     if message.channel.id == CHANNEL_ID or message.channel.id == CHANNEL_ID2:
+
         if "おみくじ" in message.content or "占い" in message.content or "うらない" in message.content:
+            last_result = load_last_result() # 保存した内容を呼び出す（load_last_result）
+            new_result = choose_new_result(last_result) # 最後に出た内容を除外したランダム関数（choose_new_result）
+            save_new_result(new_result) # 出た内容を保存する（save_new_result）
+            await message.channel.send(f'あなたの運勢は....{new_result}です！')
             print('おみくじが引かれました')
-            result = random.choice(message_unsei)
-            await message.channel.send(f'あなたの運勢は....{result}です！')
 
         if "ユウちゃん" in message.content:
             print('ゆうが呼ばれました')
@@ -474,6 +472,21 @@ def dice_sql():
 ##################################################################################################
     print(f'ID：{userid}')
     print(f'名前：{nickname}')
+##################################################################################################
+# 前回の結果を読み込む
+def load_last_result():
+    if os.path.exists(result_file):
+        with open(result_file, 'r') as f:
+            return json.load(f).get('last_result', None)
+    return None
+# 新しい結果を選ぶ
+def choose_new_result(last_result):
+    possible_results = [result for result in omikuji_results if result != last_result]
+    return random.choice(possible_results)
+# 新しい結果を保存する
+def save_new_result(new_result):
+    with open(result_file, 'w') as f:
+        json.dump({'last_result': new_result}, f)
 ##################################################################################################
 def insert_data2():
     print ('ユーザー登録処理はここで行う')
